@@ -1,0 +1,24 @@
+version: '3.7'
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-container
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword  # 设置root用户的密码
+      MYSQL_DATABASE: douyin_mall  # 创建一个默认的数据库
+      MYSQL_USER: douyin_user  # 设置用户名
+      MYSQL_PASSWORD: userpassword  # 设置用户密码
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql  # 保持数据持久性
+    networks:
+      - douyin-mall-network
+    restart: always
+
+volumes:
+  mysql-data:
+
+networks:
+  douyin-mall-network:
+    external: true
