@@ -5,7 +5,10 @@ import (
 	"douyin/pkg/config"
 	"douyin/pkg/database"
 	"douyin/pkg/handler"
+	"douyin/pkg/registry" 
 	"douyin/pkg/middleware"
+	"douyin/pkg/metrics" 
+	"douyin/pkg/logger" 
 	"log"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -23,6 +26,9 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
+	// 启动 Prometheus 指标服务器
+	metrics.StartMetricsServer(":9090")
+
 	// 创建 Hertz 服务器
 	h := server.Default(server.WithHostPorts(":8080"))
 
@@ -32,14 +38,38 @@ func main() {
 	// 注册路由
 	registerRoutes(h)
 
+	// 创建 Consul 客户端
+	consulClient, err := registry.NewConsulClient()
+	if err != nil {
+		log.Fatalf("Failed to create Consul client: %v", err)
+	}
+
+	// 注册服务到 Consul
+	if err := consulClient.RegisterService("douyin-service", 8080); err != nil {
+		log.Fatalf("Failed to register service: %v", err)
+	}
+
+	// 测试服务发现
+	serviceAddress, err := consulClient.DiscoverService("douyin-service")
+	if err != nil {
+		log.Fatalf("Failed to discover service: %v", err)
+	}
+	log.Printf("Discovered service address: %s", serviceAddress)
+	
 	// 启动服务器
 	if err := h.Run(); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
+
+	// 刷新日志缓冲区
+	defer logger.Sync()
 }
 
 // 注册路由
 func registerRoutes(h *server.Hertz) {
+	// 应用监控中间件
+	h.Use(middleware.MetricsMiddleware())
+	
 	// 用户服务路由
 	userGroup := h.Group("/api/user")
 	{

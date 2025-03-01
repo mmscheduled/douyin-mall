@@ -1,0 +1,5 @@
+scrape_configs:
+  - job_name: 'douyin'
+    static_configs:
+      - targets: ['localhost:9090']  
+      # 你的服务暴露的 Prometheus 指标地址
